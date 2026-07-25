@@ -34,6 +34,7 @@ const parser = new XMLParser({
   allowBooleanAttributes: true,
   parseTagValue: true,
   trimValues: true,
+  cdataPropName: "__cdata",
 });
 
 async function fetchText(url) {
@@ -54,19 +55,44 @@ function regexFallbackParse(xml) {
   for (const block of itemBlocks) {
     const title = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "";
     const link = (block.match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "";
-    const pubDate = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1] || "";
-    items.push({ title: cleanText(title), link: cleanText(link), pubDate: cleanText(pubDate) });
+    const description =
+      (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
+    const pubDate =
+      (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1] || "";
+    items.push({
+      title: cleanText(title),
+      link: cleanText(link),
+      description: cleanText(description),
+      pubDate: cleanText(pubDate),
+    });
   }
   return items;
 }
 
 function cleanText(str) {
-  return str.replace(/<!\[CDATA\[/g, "").replace(/\]\]>/g, "").trim();
+  return String(str)
+    .replace(/<!\[CDATA\[/g, "")
+    .replace(/\]\]>/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function isBankJob(title) {
   const lower = title.toLowerCase();
   return BANK_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function extractLastDate(text) {
+  const m = text.match(
+    /(?:last date|apply by|closing date)[^0-9]{0,15}(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i
+  );
+  return m ? m[1] : "";
+}
+
+function extractVacancies(text) {
+  const m = text.match(/(\d{1,5})\s*(?:vacancies|posts|vacancy|post)/i);
+  return m ? m[1] : "";
 }
 
 async function scrapeSource(source) {
@@ -81,9 +107,15 @@ async function scrapeSource(source) {
       const rssItems = parsed?.rss?.channel?.item ?? parsed?.feed?.entry ?? [];
       items = Array.isArray(rssItems) ? rssItems : [rssItems];
       items = items.map((it) => ({
-        title: cleanText(String(it.title?.["#text"] ?? it.title ?? "")),
-        link: cleanText(String(it.link?.["@_href"] ?? it.link?.["#text"] ?? it.link ?? "")),
-        pubDate: cleanText(String(it.pubDate ?? it.published ?? it.updated ?? "")),
+        title: cleanText(it.title?.__cdata ?? it.title?.["#text"] ?? it.title ?? ""),
+        link: cleanText(it.link?.["@_href"] ?? it.link?.["#text"] ?? it.link ?? ""),
+        description: cleanText(
+          it.description?.__cdata ??
+            it["content:encoded"]?.__cdata ??
+            it.description ??
+            ""
+        ),
+        pubDate: cleanText(it.pubDate ?? it.published ?? it.updated ?? ""),
       }));
     } catch (parseErr) {
       items = regexFallbackParse(raw);
@@ -93,14 +125,20 @@ async function scrapeSource(source) {
       if (!item.title || !item.link) continue;
       if (!isBankJob(item.title)) continue;
 
-      const postedDate = item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString();
+      const combinedText = `${item.title} ${item.description}`;
+      const domain = source.url.split("/")[2] || "";
+      const isDirectLink = !item.link.includes(domain);
 
       jobs.push({
         title: item.title,
-        link: item.link,
+        teluguSummary: "",
+        lastDate: extractLastDate(combinedText),
+        vacancies: extractVacancies(combinedText),
         source: source.name,
-        postedDate,
-        type: item.link.includes(source.url.split("/")[2]) ? "VIEW_DETAILS" : "APPLY",
+        applyLink: item.link,
+        link: item.link,
+        isDirectLink,
+        pubDate: item.pubDate,
       });
     }
 
@@ -111,43 +149,62 @@ async function scrapeSource(source) {
   return jobs;
 }
 
-function dedupe(jobs) {
-  const seen = new Set();
-  const result = [];
-  for (const job of jobs) {
-    const key = job.link.trim().toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(job);
-  }
-  return result;
-}
-
-function loadExistingJobs() {
+function loadExisting() {
   try {
     const raw = fs.readFileSync(OUTPUT_PATH, "utf-8");
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    return Array.isArray(data.jobs) ? data.jobs : [];
   } catch {
     return [];
   }
 }
 
 async function main() {
-  const allNew = [];
+  const scraped = [];
   for (const source of SOURCES) {
     const jobs = await scrapeSource(source);
-    allNew.push(...jobs);
+    scraped.push(...jobs);
   }
 
-  const existing = loadExistingJobs();
-  const merged = dedupe([...allNew, ...existing]).sort(
-    (a, b) => new Date(b.postedDate) - new Date(a.postedDate)
-  );
+  const existing = loadExisting();
+  const existingByLink = new Map(existing.map((j) => [j.link.trim().toLowerCase(), j]));
+
+  const nowIso = new Date().toISOString();
+  const merged = [];
+  const seen = new Set();
+
+  for (const job of scraped) {
+    const key = job.link.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const prev = existingByLink.get(key);
+    merged.push({
+      ...job,
+      postedDate: prev?.postedDate || nowIso,
+    });
+  }
+
+  for (const job of existing) {
+    const key = job.link.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(job);
+  }
+
+  merged.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+
+  const output = {
+    updatedAt: nowIso,
+    count: merged.length,
+    jobs: merged,
+  };
 
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(merged, null, 2));
+  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2));
 
-  console.log(`Saved ${merged.length} total bank jobs (${allNew.length} found this run) -> ${OUTPUT_PATH}`);
+  console.log(
+    `Saved ${merged.length} total bank jobs (${scraped.length} found this run) -> ${OUTPUT_PATH}`
+  );
 }
 
 main().catch((err) => {
