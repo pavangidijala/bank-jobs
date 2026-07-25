@@ -107,9 +107,50 @@ function teluguSummary({ bankName, title, vacancies, lastDate }) {
   return s;
 }
 
+// Domains that are almost certainly the *official* source (govt/bank sites),
+// as opposed to the aggregator blog itself. Add more as you notice misses.
+const OFFICIAL_DOMAIN_HINTS = [
+  '.gov.in', '.nic.in', 'ibps.in', 'sbi.co.in', 'rbi.org.in', 'nabard.org',
+  'idbibank.in', 'pnbindia.in', 'canarabank.com', 'unionbankofindia.co.in',
+  'bankofbaroda.in', 'iob.in', 'centralbankofindia.co.in', 'ucobank.com',
+  'bankofindia.co.in', 'bankofmaharashtra.in', 'psbindia.in', 'federalbank.co.in',
+  'southindianbank.com', 'kvb.co.in', 'sidbi.in',
+];
+// Words in the anchor text itself that suggest "this is the apply/official link"
+const APPLY_TEXT_HINTS = ['apply', 'official website', 'official notification', 'notification pdf', 'download notification'];
+
+// Best-effort: pull an official/apply link out of the article's HTML body.
+// RSS "link" always points at the aggregator's own article page — this looks
+// *inside* that article for an outbound link to the real bank/govt site.
+// Not guaranteed to find one; falls back to the article link itself.
+function extractOfficialLink(item, articleHostname) {
+  const html = item.content || item['content:encoded'] || '';
+  if (!html) return { url: item.link, isDirect: false };
+
+  const anchors = [...html.matchAll(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis)];
+  let best = null;
+  let bestScore = 0;
+
+  for (const [, href, innerHtml] of anchors) {
+    if (!/^https?:\/\//i.test(href)) continue;
+    let hostname;
+    try { hostname = new URL(href).hostname; } catch { continue; }
+    if (hostname.includes(articleHostname)) continue; // skip links back to the same blog
+
+    const text = innerHtml.replace(/<[^>]+>/g, ' ').toLowerCase();
+    let score = 0;
+    if (OFFICIAL_DOMAIN_HINTS.some((d) => hostname.includes(d))) score += 3;
+    if (APPLY_TEXT_HINTS.some((t) => text.includes(t))) score += 2;
+    if (score > bestScore) { bestScore = score; best = href; }
+  }
+
+  return best ? { url: best, isDirect: true } : { url: item.link, isDirect: false };
+}
+
 async function scrapeSource(source) {
   try {
     const feed = await parser.parseURL(source.url);
+    const articleHostname = new URL(source.url).hostname;
     const jobs = [];
     for (const item of feed.items || []) {
       const title = (item.title || '').trim();
@@ -121,10 +162,13 @@ async function scrapeSource(source) {
       const lastDate = extractLastDate(combined);
       const vacancies = extractVacancies(combined);
       const bankName = detectBankName(combined);
+      const { url: applyLink, isDirect } = extractOfficialLink(item, articleHostname);
 
       jobs.push({
         title,
         link: item.link,
+        applyLink,
+        isDirectLink: isDirect,
         source: source.name,
         publishedAt: item.isoDate || item.pubDate || null,
         lastDate,
