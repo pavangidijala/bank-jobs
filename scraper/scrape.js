@@ -7,10 +7,9 @@ const OUTPUT_PATH = path.join(__dirname, "..", "public", "jobs.json");
 
 const SOURCES = [
   { name: "Govt Jobs Diary", url: "https://www.govtjobsdiary.com/feed/" },
-  { name: "Govt Jobs Blog", url: "https://www.govtjobsblog.com/feed/" },
-  { name: "Sarkari Naukri Blog", url: "https://sarkarinaukriblog.com/feed/" },
+  { name: "Govt Jobs Blog", url: "https://govtjobsblog.in/feed/" },
   { name: "India Sarkari Naukri", url: "https://www.indiasarkarinaukri.com/feed/" },
-  { name: "Career Power Blog", url: "https://www.careerpower.in/blog/feed/" },
+  { name: "India Job Live", url: "https://indiajoblive.com/feed/" },
 ];
 
 const BANK_KEYWORDS = [
