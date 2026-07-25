@@ -254,7 +254,9 @@ function render(jobs){
           </div>
           <div class="apply-row">
             <span class="source-tag">Source: ${escapeHtml(job.source || '—')}</span>
-            <a class="apply" href="${job.link}" target="_blank" rel="noopener">APPLY →</a>
+            <a class="apply" href="${job.applyLink || job.link}" target="_blank" rel="noopener">
+  ${job.isDirectLink ? 'APPLY →' : 'VIEW DETAILS →'}
+</a>
           </div>
         </div>
       </div>`;
