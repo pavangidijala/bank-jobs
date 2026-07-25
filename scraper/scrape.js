@@ -14,16 +14,19 @@ const SOURCES = [
 ];
 
 const BANK_KEYWORDS = [
-  "bank", "rbi", "sbi", "ibps", "nabard", "sidbi",
-  "cooperative bank", "gramin bank",
+  "bank", "rbi", "sbi", "ibps", "nabard", "sidbi", "idbi", "exim bank",
+  "nhb", "lic", "sebi", "niacl", "gic", "uiic",
+  "canara", "pnb", "punjab national", "bank of baroda", "bank of india",
+  "union bank", "indian bank", "uco bank", "central bank", "yes bank",
+  "hdfc bank", "icici bank", "axis bank", "kotak", "indusind",
+  "federal bank", "karnataka bank", "karur vysya", "south indian bank",
+  "csb bank", "dcb bank", "rrb", "gramin bank", "cooperative bank",
+  "small finance bank", "payments bank", "psu bank",
 ];
 
 const HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "User-Agent": "Mozilla/5.0 (compatible; BankJobsBot/1.0; +https://bank-jobs.vercel.app)",
   Accept: "application/rss+xml, application/xml, text/xml, */*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
 };
 
 const parser = new XMLParser({
