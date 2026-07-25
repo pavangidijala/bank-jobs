@@ -1,0 +1,13 @@
+{
+  "name": "bankjobs-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Daily scraper that pulls bank job notifications into public/jobs.json",
+  "main": "scrape.js",
+  "scripts": {
+    "scrape": "node scrape.js"
+  },
+  "dependencies": {
+    "rss-parser": "^3.13.0"
+  }
+}

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>బ్యాంక్ ఉద్యోగాలు — Daily Bank Jobs Notice Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1C2E;
+    --surface:#16273D;
+    --surface-2:#1D3049;
+    --gold:#D4A73A;
+    --gold-soft:#8A7230;
+    --green:#4C9A6A;
+    --red:#C1554A;
+    --paper:#EDEBE3;
+    --muted:#8B96A8;
+    --line:#2A3C55;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(212,167,58,0.06), transparent 40%),
+      radial-gradient(circle at 88% 92%, rgba(76,154,106,0.05), transparent 40%);
+    color:var(--paper);
+    font-family:'Inter', 'Noto Sans Telugu', sans-serif;
+    min-height:100vh;
+  }
+  .telugu{ font-family:'Noto Sans Telugu','Inter',sans-serif; }
+  .mono{ font-family:'JetBrains Mono', monospace; letter-spacing:0.02em; }
+
+  header.board{
+    border-bottom:2px solid var(--line);
+    padding:28px 20px 20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    max-width:960px;
+    margin:0 auto;
+  }
+  .seal{
+    width:52px;height:52px;border-radius:50%;
+    border:2px solid var(--gold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Roboto Slab',serif;font-weight:700;font-size:20px;
+    color:var(--gold);flex-shrink:0;
+    box-shadow:inset 0 0 0 3px rgba(212,167,58,0.15);
+  }
+  h1{
+    font-family:'Roboto Slab',serif;
+    font-weight:700;
+    font-size:22px;
+    margin:0 0 4px;
+    letter-spacing:0.01em;
+  }
+  header p{
+    margin:0;color:var(--muted);font-size:13px;
+  }
+
+  .toolbar{
+    max-width:960px;margin:20px auto 0;padding:0 20px;
+    display:flex;gap:10px;flex-wrap:wrap;
+  }
+  .toolbar input{
+    flex:1;min-width:220px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--paper);
+    padding:11px 14px;border-radius:6px;
+    font-family:'Inter',sans-serif;font-size:14px;
+  }
+  .toolbar input:focus{outline:none;border-color:var(--gold);}
+  .toolbar input::placeholder{color:var(--muted);}
+  .updated-strip{
+    max-width:960px;margin:10px auto 0;padding:0 20px;
+    font-size:12px;color:var(--muted);
+    display:flex;justify-content:space-between;
+  }
+
+  main{max-width:960px;margin:0 auto;padding:20px;}
+  .empty{
+    text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;
+  }
+
+  .card{
+    display:flex;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .stub{
+    width:64px;flex-shrink:0;
+    background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Roboto Slab',serif;font-weight:700;
+    font-size:15px;color:var(--gold);
+    border-right:2px dashed var(--line);
+    text-align:center;
+    padding:8px 4px;
+    writing-mode:vertical-rl;
+    letter-spacing:0.06em;
+  }
+  .body{flex:1;padding:16px 18px;min-width:0;}
+  .title-row{
+    display:flex;justify-content:space-between;gap:10px;align-items:flex-start;
+    margin-bottom:6px;
+  }
+  .job-title{font-weight:600;font-size:15px;line-height:1.4;}
+  .badge{
+    flex-shrink:0;
+    font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;
+    font-family:'JetBrains Mono',monospace;
+    white-space:nowrap;
+  }
+  .badge.open{background:rgba(76,154,106,0.15);color:var(--green);}
+  .badge.soon{background:rgba(212,167,58,0.15);color:var(--gold);}
+  .badge.urgent{background:rgba(193,85,74,0.18);color:var(--red);}
+  .badge.closed{background:rgba(139,150,168,0.15);color:var(--muted);}
+
+  .telugu-line{
+    font-size:14px;line-height:1.7;color:var(--paper);
+    margin:8px 0;
+    opacity:0.92;
+  }
+  .meta-row{
+    display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 12px;
+    font-size:12.5px;color:var(--muted);
+  }
+  .meta-row span{display:flex;align-items:center;gap:5px;}
+  .meta-row b{color:var(--paper);font-family:'JetBrains Mono',monospace;font-weight:700;}
+
+  .apply-row{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .source-tag{font-size:11px;color:var(--muted);}
+  a.apply{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;
+    color:var(--ink);background:var(--gold);
+    padding:8px 16px;border-radius:6px;text-decoration:none;
+    letter-spacing:0.03em;white-space:nowrap;
+  }
+  a.apply:hover{background:#e6bd52;}
+
+  footer{
+    text-align:center;color:var(--muted);font-size:12px;
+    padding:30px 20px 40px;
+  }
+
+  @media (max-width:520px){
+    .stub{writing-mode:horizontal-tb;width:auto;padding:6px 12px;border-right:none;border-bottom:2px dashed var(--line);}
+    .card{flex-direction:column;}
+    .title-row{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<header class="board">
+  <div class="seal">బ్యా</div>
+  <div>
+    <h1>Bank Jobs — Daily Notice Board</h1>
+    <p>ప్రతి రోజు ఆటోమేటిక్‌గా అప్‌డేట్ అయ్యే బ్యాంక్ ఉద్యోగాల నోటిఫికేషన్లు</p>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input id="search" type="text" placeholder="బ్యాంక్ పేరు / పోస్ట్ వెతకండి... (e.g. SBI, Clerk, PO)">
+</div>
+<div class="updated-strip">
+  <span id="updatedAt">loading...</span>
+  <span id="jobCount"></span>
+</div>
+
+<main id="jobList">
+  <div class="empty">Loading job notifications...</div>
+</main>
+
+<footer>
+  Data auto-collected from public job-notification feeds daily. Always verify details on the official notification before applying.
+</footer>
+
+<script>
+async function loadJobs(){
+  const listEl = document.getElementById('jobList');
+  try{
+    const res = await fetch('jobs.json', {cache:'no-store'});
+    const data = await res.json();
+    window.__jobs = data.jobs || [];
+    document.getElementById('updatedAt').textContent =
+      'Last updated: ' + new Date(data.updatedAt).toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('jobCount').textContent = (data.count || window.__jobs.length) + ' jobs';
+    render(window.__jobs);
+  }catch(e){
+    listEl.innerHTML = '<div class="empty">jobs.json ఇంకా అందుబాటులో లేదు. మొదటి scraper run అయ్యాక ఇక్కడ కనిపిస్తుంది.</div>';
+  }
+}
+
+function daysLeft(dateStr){
+  if(!dateStr) return null;
+  let d = null;
+  const slash = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(slash){
+    let [_, dd, mm, yy] = slash;
+    if(yy.length === 2) yy = '20'+yy;
+    d = new Date(`${yy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`);
+  } else {
+    const parsed = new Date(dateStr);
+    if(!isNaN(parsed)) d = parsed;
+  }
+  if(!d || isNaN(d)) return null;
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+
+function badgeFor(days){
+  if(days === null) return {cls:'soon', label:'DATE N/A'};
+  if(days < 0) return {cls:'closed', label:'CLOSED'};
+  if(days <= 3) return {cls:'urgent', label:days + 'd left'};
+  if(days <= 10) return {cls:'soon', label:days + 'd left'};
+  return {cls:'open', label:days + 'd left'};
+}
+
+function stubLetters(job){
+  const m = job.title.match(/^[A-Za-z]+/);
+  return (m ? m[0] : 'BANK').slice(0,4).toUpperCase();
+}
+
+function render(jobs){
+  const listEl = document.getElementById('jobList');
+  if(!jobs.length){
+    listEl.innerHTML = '<div class="empty">ఏ jobs దొరకలేదు.</div>';
+    return;
+  }
+  listEl.innerHTML = jobs.map(job => {
+    const days = daysLeft(job.lastDate);
+    const badge = badgeFor(days);
+    return `
+      <div class="card">
+        <div class="stub">${stubLetters(job)}</div>
+        <div class="body">
+          <div class="title-row">
+            <div class="job-title">${escapeHtml(job.title)}</div>
+            <div class="badge ${badge.cls}">${badge.label}</div>
+          </div>
+          <div class="telugu-line telugu">${escapeHtml(job.teluguSummary || '')}</div>
+          <div class="meta-row">
+            ${job.lastDate ? `<span>Last date: <b>${escapeHtml(job.lastDate)}</b></span>` : ''}
+            ${job.vacancies ? `<span>Vacancies: <b>${escapeHtml(job.vacancies)}</b></span>` : ''}
+          </div>
+          <div class="apply-row">
+            <span class="source-tag">Source: ${escapeHtml(job.source || '—')}</span>
+            <a class="apply" href="${job.link}" target="_blank" rel="noopener">APPLY →</a>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+document.getElementById('search').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  const filtered = (window.__jobs || []).filter(j =>
+    j.title.toLowerCase().includes(q) || (j.teluguSummary||'').includes(q)
+  );
+  render(filtered);
+});
+
+loadJobs();
+</script>
+</body>
+</html>
