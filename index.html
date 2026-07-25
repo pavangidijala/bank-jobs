@@ -75,6 +75,28 @@
   }
   .toolbar input:focus{outline:none;border-color:var(--gold);}
   .toolbar input::placeholder{color:var(--muted);}
+
+  .tabs{
+    max-width:960px;margin:14px auto 0;padding:0 20px;
+    display:flex;gap:8px;
+  }
+  .tab-btn{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;
+    letter-spacing:0.03em;
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:9px 16px;border-radius:6px;
+    cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .tab-btn:hover{border-color:var(--gold-soft);}
+  .tab-btn.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--ink);
+  }
+
   .updated-strip{
     max-width:960px;margin:10px auto 0;padding:0 20px;
     font-size:12px;color:var(--muted);
@@ -170,6 +192,12 @@
 <div class="toolbar">
   <input id="search" type="text" placeholder="బ్యాంక్ పేరు / పోస్ట్ వెతకండి... (e.g. SBI, Clerk, PO)">
 </div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabToday" data-tab="today">TODAY</button>
+  <button class="tab-btn" id="tabAll" data-tab="all">ALL JOBS</button>
+</div>
+
 <div class="updated-strip">
   <span id="updatedAt">loading...</span>
   <span id="jobCount"></span>
@@ -180,23 +208,49 @@
 </main>
 
 <footer>
-  Data auto-collected from public job-notification feeds daily. Always verify details on the official notification before applying.
+  Data auto-collected from public job-notification feeds daily. Always verify details on the official notification before applying. Page auto-refreshes every 1 minute.
 </footer>
 
 <script>
+let currentTab = 'today';
+
 async function loadJobs(){
   const listEl = document.getElementById('jobList');
   try{
-    const res = await fetch('public/jobs.json', {cache:'no-store'});
+    const res = await fetch('public/jobs.json?t=' + Date.now(), {cache:'no-store'});
     const data = await res.json();
     window.__jobs = data.jobs || [];
     document.getElementById('updatedAt').textContent =
       'Last updated: ' + new Date(data.updatedAt).toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
-    document.getElementById('jobCount').textContent = (data.count || window.__jobs.length) + ' jobs';
-    render(window.__jobs);
+    applyTabAndSearch();
   }catch(e){
     listEl.innerHTML = '<div class="empty">jobs.json ఇంకా అందుబాటులో లేదు. మొదటి scraper run అయ్యాక ఇక్కడ కనిపిస్తుంది.</div>';
   }
+}
+
+function isToday(job){
+  if(!job.postedDate) return false;
+  const posted = new Date(job.postedDate);
+  const now = new Date();
+  return posted.toDateString() === now.toDateString();
+}
+
+function applyTabAndSearch(){
+  const q = document.getElementById('search').value.toLowerCase();
+  let jobs = window.__jobs || [];
+
+  if(currentTab === 'today'){
+    jobs = jobs.filter(isToday);
+  }
+
+  if(q){
+    jobs = jobs.filter(j =>
+      j.title.toLowerCase().includes(q) || (j.teluguSummary||'').includes(q)
+    );
+  }
+
+  document.getElementById('jobCount').textContent = jobs.length + ' jobs';
+  render(jobs);
 }
 
 function daysLeft(dateStr){
@@ -233,7 +287,9 @@ function stubLetters(job){
 function render(jobs){
   const listEl = document.getElementById('jobList');
   if(!jobs.length){
-    listEl.innerHTML = '<div class="empty">ఏ jobs దొరకలేదు.</div>';
+    listEl.innerHTML = currentTab === 'today'
+      ? '<div class="empty">ఈరోజు కొత్త jobs ఇంకా రాలేదు. "ALL JOBS" tab చూడండి.</div>'
+      : '<div class="empty">ఏ jobs దొరకలేదు.</div>';
     return;
   }
   listEl.innerHTML = jobs.map(job => {
@@ -267,15 +323,26 @@ function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 
-document.getElementById('search').addEventListener('input', (e) => {
-  const q = e.target.value.toLowerCase();
-  const filtered = (window.__jobs || []).filter(j =>
-    j.title.toLowerCase().includes(q) || (j.teluguSummary||'').includes(q)
-  );
-  render(filtered);
+document.getElementById('search').addEventListener('input', applyTabAndSearch);
+
+document.getElementById('tabToday').addEventListener('click', () => {
+  currentTab = 'today';
+  document.getElementById('tabToday').classList.add('active');
+  document.getElementById('tabAll').classList.remove('active');
+  applyTabAndSearch();
+});
+
+document.getElementById('tabAll').addEventListener('click', () => {
+  currentTab = 'all';
+  document.getElementById('tabAll').classList.add('active');
+  document.getElementById('tabToday').classList.remove('active');
+  applyTabAndSearch();
 });
 
 loadJobs();
+
+// Auto-refresh every 1 minute
+setInterval(loadJobs, 60000);
 </script>
 </body>
 </html>
