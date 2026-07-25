@@ -187,7 +187,7 @@
 async function loadJobs(){
   const listEl = document.getElementById('jobList');
   try{
-    const res = await fetch('jobs.json', {cache:'no-store'});
+    const res = await fetch('public/jobs.json', {cache:'no-store'});
     const data = await res.json();
     window.__jobs = data.jobs || [];
     document.getElementById('updatedAt').textContent =
